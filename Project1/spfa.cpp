@@ -1,6 +1,5 @@
 #include "spfa.h"
 
-
 namespace spfa{
 	void spfa::clear(){
 		tot = 0;
