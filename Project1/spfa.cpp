@@ -38,6 +38,7 @@ namespace spfa{
 		dis[st] = 0;
 		for (int t = 0; t < l.size(); t++){
 			double nowdis = dis[l[t]];
+			isin[l[t]] = 0;
 			if (ed.size() == 1 && dis[ed[0]] < dis[l[t]]) continue;
 			for (int j = next[l[t]]; ~j; j = next[j])
 				if (dis[num[j]] > nowdis + val[j]){
@@ -48,7 +49,6 @@ namespace spfa{
 						l.push_back(num[j]);
 					}
 				}
-			isin[l[t]] = 0;
 		}
 		for (int i = 0; i < ed.size(); i++){
 			int end = ed[i];
