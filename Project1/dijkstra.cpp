@@ -64,7 +64,7 @@ namespace dijkstra{
 				res[j] = res[res.size() - 1 - j];
 				res[res.size() - 1 - j] = tmp;
 			}
-			if (res[0] != st) res.clear();
+			if (res.size() && res[0] != st) res.clear();
 			r_start.push_back(route.size());
 			for (int j = 0; j < res.size(); j++)
 				route.push_back(res[j]);
@@ -123,12 +123,15 @@ namespace dijkstra{
 	void dijkstra::add_estimate_data(std::vector<geometry::Point> &vec){
 		if (vec.size() < n)	return;
 		point_pos = vec;
+		for (int i = 0; i < n; i++)
+			point_pos[i]._re = i;
 		estimate_data_added = 1;
 	}
-	void dijkstra::taxi_data_fitting(int tot, std::vector<Taxi_Data> &data, sp_common::mid_point start, double max_r, double p_rate, std::vector<geometry::Point> & res){
+	void dijkstra::taxi_data_fitting(int tot, std::vector<Taxi_Data> &data, sp_common::mid_point start, double max_r, double p_rate, std::vector<int> &r_start, std::vector<geometry::Point> & res){
 		res.clear();
 		if (tot > data.size()) return;
 		geometry::Point tmp = point_pos[start.y] - point_pos[start.x];
+		r_start.push_back(0);
 		res.push_back(tmp / tmp.len() * start.z + point_pos[start.x]);
 		int nowres = 0;
 		sp_common::mid_point last = start, mid_now;
@@ -145,23 +148,13 @@ namespace dijkstra{
 			heap.push_back(std::make_pair(-last.z, last.x));
 			heap.push_back(std::make_pair(-last.z2, last.y));
 			double max_dis = max_r * (now_point - geometry::Point(data[i - 1].x, data[i - 1].y)).len() + (now_point - point_pos[last.x]).len() + (geometry::Point(data[i - 1].x, data[i - 1].y) - point_pos[last.x]).len();
-			
-			
-			//int BIG = 0;
-			//if (max_dis > 0.05) BIG = 1;
-			//if (BIG) printf("Big step at i: %d, %lf\n", i, max_dis);
-			//printf("max_dis: %lf, z1z2:%lf %lf\n", max_dis, last.z, last.z2);
-
-
 			for (; heap.size();){
 				int nowp = heap[0].second;
 				if (dis[nowp] != -heap[0].first || dis[nowp] > max_dis){
-					//printf("breaked: %lf, %d\n", heap[0].first, heap[0].second);
 					std::pop_heap(heap.begin(), heap.end());
 					heap.pop_back();
 					continue;
 				}
-				//if (BIG) printf("move: %d, %lf\n", heap[0].second, heap[0].first);
 				std::pop_heap(heap.begin(), heap.end());
 				heap.pop_back();
 				for (int j = next[nowp]; ~j; j = next[j]){
@@ -198,6 +191,7 @@ namespace dijkstra{
 					}
 				}
 			}
+			r_start.push_back(res.size());
 			geometry::Point tproj = geometry::proj(point_pos[last.x], point_pos[last.y], now_point);
 			if (geometry::is_point_onseg(point_pos[last.x], point_pos[last.y], tproj)){
 				double tnow_dis = std::abs((tproj - point_pos[last.x]).len() - last.z) + (now_point - tproj).len() * p_rate;
@@ -208,7 +202,6 @@ namespace dijkstra{
 					continue;
 				}
 			}
-			//if (BIG) printf("%d: %lf, %d, %d, %lf, %lf\n", i, now_closest, mid_now.x, mid_now.y, mid_now.z, mid_now.z2);
 			if (now_closest > 1e10){
 				NNNOOO:;
 				printf("cannot find ! what happened..");
@@ -223,8 +216,6 @@ namespace dijkstra{
 				tvec[j] = tvec[tvec.size() - 1 - j];
 				tvec[tvec.size() - 1 - j] = tmp;
 			}
-			//printf("tvec: ");
-			//for (int j = 0; j < tvec.size(); j++) printf("%d ", tvec[j]); printf("\n");
 			if (tvec[0] != last.x && tvec[0] != last.y){
 				tvec.clear();
 				goto NNNOOO;
@@ -235,5 +226,6 @@ namespace dijkstra{
 			res.push_back(tmp / tmp.len() * mid_now.z + point_pos[mid_now.x]);
 			last = mid_now;
 		}
+		r_start.push_back(res.size());
 	}
 }

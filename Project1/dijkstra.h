@@ -27,7 +27,7 @@ namespace dijkstra{
 		void several_end(int start, std::vector<int> &end, std::vector<double> &dist);
 		void several_end(int start, std::vector<int> &end, std::vector<double> &dist, std::vector<int> &route_start, std::vector<int> &route);
 		void add_estimate_data(std::vector<geometry::Point> &position);
-		void taxi_data_fitting(int tot, std::vector<Taxi_Data> &data, sp_common::mid_point start, double max_radius, double punish_rate, std::vector<geometry::Point> & ans_route);
+		void taxi_data_fitting(int tot, std::vector<Taxi_Data> &data, sp_common::mid_point start, double max_radius, double punish_rate, std::vector<int> &route_start, std::vector<geometry::Point> & ans_route);
 	};
 }
 #endif

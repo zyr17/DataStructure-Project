@@ -12,7 +12,7 @@ double get_area(array<PointF> ^);
 int main(){
 	MyForm form;
 
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 	Console::WriteLine("Start!{0}", Clock());
 #endif
 
@@ -30,7 +30,7 @@ int main(){
 		pugi::xml_document xmldoc;
 		xmldoc.load_file(InputXML);
 
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 		Console::WriteLine("read time:{0}", Clock());
 #endif
 
@@ -40,7 +40,7 @@ int main(){
 		pugi::xml_node xmlroot = xmldoc.child("osm");
 		pugi::xml_node itemp = xmlroot.first_child();
 
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 		System::Console::WriteLine("Time: {0}, Inner:|{1}|", Clock(), gcnew String(itemp.text().as_string()));
 #endif
 		int total = -1, totnode = 0;
@@ -50,8 +50,8 @@ int main(){
 		//pugi::xml_node itemp = xmlroot.first_child();
 		//for (int i = 0; i < total; i++){
 		for (total = 0; itemp; total++){
-#ifdef DEBUG_LITTLE
-			if (total % 10000 == 0) Console::WriteLine(total);
+#ifdef DEBUG_TIME
+			if (total % 10000 == 0) Console::WriteLine("{0}, time: {1}", total, Clock());
 #endif
 			//if (itemp->Name->CompareTo("node") == 0){
 			if (strcmp(itemp.name(), "node") == 0){
@@ -549,8 +549,8 @@ int main(){
 		xmldoc.reset();
 
 
-#ifdef DEBUG_LITTLE
-		Console::WriteLine("End of xml reading.");
+#ifdef DEBUG_TIME
+		Console::Write("End of xml reading. now time:");
 		Console::WriteLine(Clock());
 #endif
 
@@ -912,6 +912,12 @@ int main(){
 
 	form.to_draw_picture(drawlist);
 	form.Save_pic(gcnew String(save_place));
+
+#ifdef DEBUG_TIME
+	Console::WriteLine("Show dialog! {0}", Clock());
+#endif
+
+
 
 	form.ShowDialog();
 	return 0;

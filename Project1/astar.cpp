@@ -71,7 +71,8 @@ namespace astar{
 		res.resize(res_tot);
 		for (int j = end; ~j && last_calc[j] == calc_times; j = fa[j])
 			res[--res_tot] = j;
-		if (res[0] != st) res.clear();
+		if (res.size() && res[0] != st) res.clear();
+		if (last_calc[end] != calc_times) dis[end] = line_max;
 		dist = dis[end];
 	}
 

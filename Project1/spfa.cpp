@@ -60,7 +60,7 @@ namespace spfa{
 				res[j] = res[res.size() - 1 - j];
 				res[res.size() - 1 - j] = tmp;
 			}
-			if (res[0] != st) res.clear();
+			if (res.size() && res[0] != st) res.clear();
 			r_start.push_back(route.size());
 			for (int j = 0; j < res.size(); j++)
 				route.push_back(res[j]);

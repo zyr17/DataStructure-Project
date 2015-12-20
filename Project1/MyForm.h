@@ -35,9 +35,10 @@ namespace Project1 {
 
 //#define DEBUG_FULL
 //#define DEBUG
-#define DEBUG_LITTLE
-#define DEBUG_DATA
-#define PIC_SAVE
+//#define DEBUG_LITTLE
+//#define DEBUG_DATA
+#define DEBUG_TIME
+//#define PIC_SAVE
 #define PRE_DRAW
 
 #define DRAW_PLACE
@@ -49,7 +50,9 @@ namespace Project1 {
 	
 	std::vector<Taxi_Data> taxi_data;
 	std::vector<geometry::Point> taxi_fitting_point;
+	std::vector<int> taxi_fitting_start;
 	int to_draw_taxi = 0;
+	int draw_fitting_road = 0;
 
 	enum draw_type {point, line, area, full_line};
 	struct draw_obj{
@@ -131,6 +134,7 @@ namespace Project1 {
 	double __y_del;
 	const int navi_size[map_level] = { 5, 5, 5, 3 };
 	const int taxi_size[map_level] = { 3, 2, 2, 1 };
+	const int fitting_size[map_level] = { 3, 2, 2, 1 };
 	const int taxi_point_size[map_level] = { 12, 10, 8, 5 };
 
 	const int road_offset = 100;
@@ -264,8 +268,10 @@ namespace Project1 {
 #define Selected_alpha_color Color::FromArgb(static_cast<Int32>(static_cast<Byte>(127)), static_cast<Int32>(static_cast<Byte>(255)), static_cast<Int32>(static_cast<Byte>(0)), static_cast<Int32>(static_cast<Byte>(0)))
 #define Selected_color Color::FromArgb(static_cast<Int32>(static_cast<Byte>(255)), static_cast<Int32>(static_cast<Byte>(255)), static_cast<Int32>(static_cast<Byte>(0)), static_cast<Int32>(static_cast<Byte>(0)))
 #define Navigation_color Color::FromArgb(static_cast<Int32>(static_cast<Byte>(255)), static_cast<Int32>(static_cast<Byte>(128)), static_cast<Int32>(static_cast<Byte>(0)), static_cast<Int32>(static_cast<Byte>(128)))
-#define Taxi_color Color::Blue
-#define Taxi_empty_color Color::Purple
+#define Taxi_color Color::FromArgb(static_cast<Int32>(static_cast<Byte>(0x00)), static_cast<Int32>(static_cast<Byte>(0xB3)), static_cast<Int32>(static_cast<Byte>(0xB3)))
+#define Taxi_empty_color Color::FromArgb(static_cast<Int32>(static_cast<Byte>(0xff)), static_cast<Int32>(static_cast<Byte>(0x66)), static_cast<Int32>(static_cast<Byte>(0xcc)))
+#define Fitting_color Color::FromArgb(static_cast<Int32>(static_cast<Byte>(0x66)), static_cast<Int32>(static_cast<Byte>(0x77)), static_cast<Int32>(static_cast<Byte>(0x77)))
+#define Fitting_empty_color Color::FromArgb(static_cast<Int32>(static_cast<Byte>(0xB3)), static_cast<Int32>(static_cast<Byte>(0x47)), static_cast<Int32>(static_cast<Byte>(0x8f)))
 #define Unknown_color Color::Pink
 
 		bool iniaa = 0, inisave = 0;
@@ -350,6 +356,8 @@ private: System::Windows::Forms::Button^  taxi_data_sort_button;
 private: System::ComponentModel::BackgroundWorker^  taxi_data_sort_worker;
 private: System::Windows::Forms::Button^  taxi_display_mode_button;
 private: System::Windows::Forms::Button^  taxi_data_to_way_button;
+private: System::Windows::Forms::Label^  taxi_esti_length_label;
+private: System::Windows::Forms::Label^  label21;
 
 
 
@@ -395,8 +403,8 @@ private: System::Windows::Forms::Button^  taxi_data_to_way_button;
 			//pic->Size = Drawing::Size(Bitmap_Height, Bitmap_Width);
 			//waiting->Size = this->Size;
 			//waiting->Size = Drawing::Size(200, 200);
-#ifdef DEBUG_LITTLE
-			//Console::WriteLine("waiting size: {0}, {1}", waiting->Size.Height, waiting->Size.Width);
+#ifdef DEBUG
+			Console::WriteLine("waiting size: {0}, {1}", waiting->Size.Height, waiting->Size.Width);
 #endif
 
 
@@ -507,6 +515,8 @@ protected:
 			this->label19 = (gcnew System::Windows::Forms::Label());
 			this->now_choose_name_label = (gcnew System::Windows::Forms::Label());
 			this->taxi_data_sort_worker = (gcnew System::ComponentModel::BackgroundWorker());
+			this->label21 = (gcnew System::Windows::Forms::Label());
+			this->taxi_esti_length_label = (gcnew System::Windows::Forms::Label());
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pic))->BeginInit();
 			this->panel1->SuspendLayout();
 			this->startpos_data->SuspendLayout();
@@ -974,6 +984,8 @@ protected:
 			// 
 			// groupBox1
 			// 
+			this->groupBox1->Controls->Add(this->taxi_esti_length_label);
+			this->groupBox1->Controls->Add(this->label21);
 			this->groupBox1->Controls->Add(this->taxi_display_mode_button);
 			this->groupBox1->Controls->Add(this->taxi_data_to_way_button);
 			this->groupBox1->Controls->Add(this->taxi_data_sort_button);
@@ -996,6 +1008,7 @@ protected:
 			this->taxi_display_mode_button->TabIndex = 6;
 			this->taxi_display_mode_button->Text = L"改变显示方式";
 			this->taxi_display_mode_button->UseVisualStyleBackColor = true;
+			this->taxi_display_mode_button->Click += gcnew System::EventHandler(this, &MyForm::taxi_display_mode_button_Click);
 			// 
 			// taxi_data_to_way_button
 			// 
@@ -1144,6 +1157,23 @@ protected:
 			// 
 			this->taxi_data_sort_worker->DoWork += gcnew System::ComponentModel::DoWorkEventHandler(this, &MyForm::taxi_sort_data_worker_do);
 			this->taxi_data_sort_worker->RunWorkerCompleted += gcnew System::ComponentModel::RunWorkerCompletedEventHandler(this, &MyForm::taxi_data_sort_worker_RunWorkerCompleted);
+			// 
+			// label21
+			// 
+			this->label21->AutoSize = true;
+			this->label21->Location = System::Drawing::Point(143, 27);
+			this->label21->Name = L"label21";
+			this->label21->Size = System::Drawing::Size(77, 12);
+			this->label21->TabIndex = 7;
+			this->label21->Text = L"估计行驶总长";
+			// 
+			// taxi_esti_length_label
+			// 
+			this->taxi_esti_length_label->AutoSize = true;
+			this->taxi_esti_length_label->Location = System::Drawing::Point(226, 27);
+			this->taxi_esti_length_label->Name = L"taxi_esti_length_label";
+			this->taxi_esti_length_label->Size = System::Drawing::Size(0, 12);
+			this->taxi_esti_length_label->TabIndex = 8;
 			// 
 			// MyForm
 			// 
@@ -1298,7 +1328,7 @@ protected:
 
 	public: System::Void Save_pic(String ^save_place){
 #ifdef PIC_SAVE
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 				Console::WriteLine("try to save pic: {0}", Clock());
 #endif
 #endif
@@ -1311,7 +1341,7 @@ protected:
 #endif
 	}
 	public: System::Void to_draw_picture(int level){
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 				Console::WriteLine("pic size: {0}, {1}", pic->Size.Height, pic->Size.Width);
 				System::Console::WriteLine("start to draw:{0}", Clock());
 #endif
@@ -1362,7 +1392,7 @@ protected:
 					if (line_tag[i] == 99) line_zlevel[i] < level ? 0 : Drawplace(gr, Unknown_color, i);
 
 
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 				Console::WriteLine("end drawing: {0}", Clock());
 #endif
 
@@ -1374,9 +1404,9 @@ protected:
 				}*/
 	}
 	public: System::Void to_draw_picture(std::vector<draw_obj> &drawlist){
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 				//Console::WriteLine("pic size: {0}, {1}", pic->Size.Height, pic->Size.Width);
-				System::Console::WriteLine("start to draw ver.2:{0}", Clock());
+				System::Console::WriteLine("start to draw ver.2: {0}", Clock());
 #endif
 
 				if (!outputbitmap && !now_preparing){// || outputbitmap->Height != Bitmap_Width || outputbitmap->Width != Bitmap_Height
@@ -1400,9 +1430,9 @@ protected:
 
 					for (int i = 0; i < full_coastline->Count; i++)
 						Drawplace(gr, Ground_color, (array<PointF>^)full_coastline[i]);
-
+#ifdef DEBUG_LITTLE
 					Console::WriteLine("drawlist has {0} elements.", drawlist.size());
-
+#endif
 					std::sort(drawlist.begin(), drawlist.end());
 					for (int i = 0; i < drawlist.size(); i++)
 					if (drawlist[i].type == draw_type::point){
@@ -1476,7 +1506,18 @@ protected:
 					Drawpoint(gr, Taxi_color, taxi_point_size[now_map_level], taxi_data[to_draw_taxi - 1].x, taxi_data[to_draw_taxi - 1].y);
 				}
 
+				if (draw_fitting_road){
+#ifdef DEBUG_LITTLE
+					Console::WriteLine("draw fittingway, size:{0}", taxi_fitting_point.size());
+#endif
+					int nowp = 0;
+					for (int i = 0; i < taxi_fitting_point.size(); i++){
+						for (; taxi_fitting_start[nowp + 1] <= i; nowp++);
+						if (i < taxi_fitting_point.size() - 1) Drawline(gr, taxi_data[nowp].empty ? Fitting_empty_color : Fitting_color, fitting_size[now_map_level], taxi_fitting_point[i].x, taxi_fitting_point[i].y, taxi_fitting_point[i + 1].x, taxi_fitting_point[i + 1].y);
+						Drawpoint(gr, taxi_data[nowp].empty ? Fitting_empty_color : Fitting_color, fitting_size[now_map_level], taxi_fitting_point[i].x, taxi_fitting_point[i].y);
+					}
 
+				}
 
 
 
@@ -1499,7 +1540,7 @@ protected:
 
 
 
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 					Console::WriteLine("end drawing ver.2: {0}", Clock());
 #endif
 					if (!now_preparing) sgr->DrawImage(outputbitmap, 0, 0);
@@ -1611,6 +1652,16 @@ private: System::Void loadpic(System::Object^  sender, System::Windows::Forms::P
 
 		 double maxoffx;
 		 double maxoffy;
+
+
+public: System::Void check_xy_offset(){
+			if (x_offset > pic->Size.Height / 3.0 / Bitmap_Height) x_offset = pic->Size.Height / 3.0 / Bitmap_Height;
+			if (y_offset > pic->Size.Width / 3.0 / Bitmap_Width) y_offset = pic->Size.Width / 3.0 / Bitmap_Width;
+			if (x_offset < pic->Size.Height / 3.0 * 2 / Bitmap_Height - 1) x_offset = pic->Size.Height / 3.0 * 2 / Bitmap_Height - 1;
+			if (y_offset < pic->Size.Width / 3.0 * 2 / Bitmap_Width - 1) y_offset = pic->Size.Width / 3.0 * 2 / Bitmap_Width - 1;
+}
+
+
 
 private: System::Void picmove(System::Object^  sender, System::Windows::Forms::MouseEventArgs^  e) {
 			 if (__pic_is_down && !__pic_is_drawing){
@@ -1767,6 +1818,22 @@ private: System::Void picup(System::Object^  sender, System::Windows::Forms::Mou
 						 return;
 					 }
 
+					 if (draw_fitting_road){
+						 double ans = 1e100;
+						 int p = -1;
+						 for (int i = 0; i < taxi_fitting_point.size(); i++){
+							 double tmp = (taxi_fitting_point[i] - offp).len2();
+							 if (ans > tmp){
+								 ans = tmp;
+								 p = i;
+							 }
+						 }
+						 upper_thing.push_back(draw_obj(draw_type::point, taxi_fitting_point[p]._re, 0, 3, taxi_fitting_point[p].x, taxi_fitting_point[p].y, taxi_fitting_point[p]._re));
+						 update_now_choose_data();
+						 if (!DrawTheMap->IsBusy) DrawTheMap->RunWorkerAsync();
+						 return;
+					 }
+
 					 if (to_draw_taxi == -1){
 						 double ans = 1e100;
 						 int p = -1;
@@ -1839,10 +1906,7 @@ private: System::Void picwheel(System::Object^  sender, System::Windows::Forms::
 #endif
 				 x_offset += e->X * 1.0 / Bitmap_Height;
 				 y_offset += e->Y * 1.0 / Bitmap_Width;
-				 if (x_offset > pic->Size.Height / 3.0 / Bitmap_Height) x_offset = pic->Size.Height / 3.0 / Bitmap_Height;
-				 if (y_offset > pic->Size.Width / 3.0 / Bitmap_Width) y_offset = pic->Size.Width / 3.0 / Bitmap_Width;
-				 if (x_offset < pic->Size.Height / 3.0 * 2 / Bitmap_Height - 1) x_offset = pic->Size.Height / 3.0 * 2 / Bitmap_Height - 1;
-				 if (y_offset < pic->Size.Width / 3.0 * 2 / Bitmap_Width - 1) y_offset = pic->Size.Width / 3.0 * 2 / Bitmap_Width - 1;
+				 check_xy_offset();
 #ifdef DEBUG_LITTLE
 				 Console::WriteLine("then offset changed to x:{0}, y:{1}", x_offset, y_offset);
 #endif
@@ -2146,8 +2210,7 @@ private: System::Void listBox1_SelectedIndexChanged(System::Object^  sender, Sys
 				 }
 				 x_offset = -tx + pic->Size.Height / 2.0 / Bitmap_Height;
 				 y_offset = -ty + pic->Size.Width / 2.0 / Bitmap_Width;
-				 double offx = -x_offset + pic->Height / 2.0 / Bitmap_Height;
-				 double offy = -y_offset + pic->Width / 2.0 / Bitmap_Width;
+				 check_xy_offset();
 				 upper_thing.clear();
 				 upper_thing.push_back(draw_obj(nowtype, tid, 0, 3, tx, ty, tid));
 				 if (!DrawTheMap->IsBusy) DrawTheMap->RunWorkerAsync();
@@ -2432,8 +2495,7 @@ private: System::Void to_start_pos_Click(System::Object^  sender, System::EventA
 			 else upper_thing.push_back(draw_obj(data.type, data.id, 0, 3, data.x, data.y, data.from[0], data.from[1]));
 			 x_offset = -data.x + pic->Size.Height / 2.0 / Bitmap_Height;
 			 y_offset = -data.y + pic->Size.Width / 2.0 / Bitmap_Width;
-			 double offx = -x_offset + pic->Height / 2.0 / Bitmap_Height;
-			 double offy = -y_offset + pic->Width / 2.0 / Bitmap_Width;
+			 check_xy_offset();
 			 if (!DrawTheMap->IsBusy) DrawTheMap->RunWorkerAsync();
 }
 private: System::Void to_end_pos_Click(System::Object^  sender, System::EventArgs^  e) {
@@ -2446,13 +2508,13 @@ private: System::Void to_end_pos_Click(System::Object^  sender, System::EventArg
 			 else upper_thing.push_back(draw_obj(data.type, data.id, 0, 3, data.x, data.y, data.from[0], data.from[1]));
 			 x_offset = -data.x + pic->Size.Height / 2.0 / Bitmap_Height;
 			 y_offset = -data.y + pic->Size.Width / 2.0 / Bitmap_Width;
-			 double offx = -x_offset + pic->Height / 2.0 / Bitmap_Height;
-			 double offy = -y_offset + pic->Width / 2.0 / Bitmap_Width;
+			 check_xy_offset();
 			 DrawTheMap->RunWorkerAsync();
 }
 private: System::Void calc_way_Click(System::Object^  sender, System::EventArgs^  e) {
 			 pic->Focus();
 			 to_draw_taxi = 0;
+			 draw_fitting_road = 0;
 			 if (__pic_is_drawing) return;
 			 if (!start_data.avaliable || !end_data.avaliable) return;
 			 double tmp_clk = Clock();
@@ -2529,6 +2591,7 @@ private: System::Void calc_way_Click(System::Object^  sender, System::EventArgs^
 private: System::Void Cancel_button_Click(System::Object^  sender, System::EventArgs^  e) {
 			 pic->Focus();
 			 to_draw_taxi = 0;
+			 draw_fitting_road = 0;
 			 if (__pic_is_drawing) return;
 			 navi_way_res.clear();
 			 sp_label->Text = Empty_String;
@@ -2562,7 +2625,8 @@ private: System::Void Random_test_Click(System::Object^  sender, System::EventAr
 }
 private: System::Void taxi_keypress(System::Object^  sender, System::Windows::Forms::KeyPressEventArgs^  e) {
 			 taxi_point_text->Text = gcnew String("");
-			 taxi_point_data_label->Text = gcnew String("");
+			 taxi_point_data_label->Text = Empty_String;
+			 taxi_esti_length_label->Text = Empty_String;
 			 if (e->KeyChar == '\n' || e->KeyChar == '\r'){
 				 taxi_tot_label->Text = gcnew String("");
 				 pic->Focus();
@@ -2647,8 +2711,7 @@ private: System::Void taxi_point_text_KeyPress(System::Object^  sender, System::
 					 upper_thing.push_back(draw_obj(draw_type::point, -1, 0, 3, tt.x, tt.y, -1));
 					 x_offset = -tt.x + pic->Size.Height / 2.0 / Bitmap_Height;
 					 y_offset = -tt.y + pic->Size.Width / 2.0 / Bitmap_Width;
-					 double offx = -x_offset + pic->Height / 2.0 / Bitmap_Height;
-					 double offy = -y_offset + pic->Width / 2.0 / Bitmap_Width;
+					 check_xy_offset();
 					 if (!DrawTheMap->IsBusy) DrawTheMap->RunWorkerAsync();
 				 }
 			 }
@@ -2660,6 +2723,7 @@ private: System::Void taxi_route_button_Click(System::Object^  sender, System::E
 			 navi_way_res.clear();
 			 upper_thing.clear();
 			 to_draw_taxi = -1;
+			 draw_fitting_road = 0;
 			 if (!DrawTheMap->IsBusy) DrawTheMap->RunWorkerAsync();
 }
 private: System::Void taxi_point_button_Click(System::Object^  sender, System::EventArgs^  e) {
@@ -2676,8 +2740,7 @@ private: System::Void taxi_point_button_Click(System::Object^  sender, System::E
 			 Taxi_Data &tt = taxi_data[tmp];
 			 x_offset = -tt.x + pic->Size.Height / 2.0 / Bitmap_Height;
 			 y_offset = -tt.y + pic->Size.Width / 2.0 / Bitmap_Width;
-			 double offx = -x_offset + pic->Height / 2.0 / Bitmap_Height;
-			 double offy = -y_offset + pic->Width / 2.0 / Bitmap_Width;
+			 check_xy_offset();
 			 if (!DrawTheMap->IsBusy) DrawTheMap->RunWorkerAsync();
 }
 private: System::Void change_algo_button_Click(System::Object^  sender, System::EventArgs^  e) {
@@ -2710,9 +2773,16 @@ private: System::Void taxi_sort_data_worker_do(System::Object^  sender, System::
 }
 private: System::Void taxi_data_sort_worker_RunWorkerCompleted(System::Object^  sender, System::ComponentModel::RunWorkerCompletedEventArgs^  e) {
 			 taxi_data_sort_button->Text = gcnew String(L"整理出租车数据");
+			 taxi_data_to_way_button->Text = gcnew String(L"出租车轨迹拟合");
 }
 private: System::Void taxi_data_to_way_button_Click(System::Object^  sender, System::EventArgs^  e) {
-#ifdef DEBUG_LITTLE
+			 if (taxi_data_sort_worker->IsBusy) return;
+			 taxi_data_to_way_button->Text = gcnew String(L"没有数据 ！");
+			 if (!taxi_data_sort_worker->IsBusy) taxi_data_sort_worker->RunWorkerAsync();
+			 if (!taxi_data.size()){
+				 return;
+			 }
+#ifdef DEBUG_TIME
 			 Console::WriteLine("start fitting: {0}", Clock());
 #endif
 			 draw_obj tmp = find_nearest_road(draw_obj(draw_type::point, -1, 0, 0, taxi_data[0].x, taxi_data[0].y, -1));
@@ -2725,14 +2795,43 @@ private: System::Void taxi_data_to_way_button_Click(System::Object^  sender, Sys
 				 double dis = (opoint_out[tmp.id[0]] - proj).len();
 				 tmid = sp_common::mid_point(tmp.id[0], tmp.id[1], dis, (opoint_out[tmp.id[0]] - opoint_out[tmp.id[1]]).len() - dis);
 			 }
-
-			 //printf("||||%d %d %lf %lf %lf\n", tmid.x, tmid.y, tmid.z, tmid.z2, (opoint_out[tmid.x] - opoint_out[tmid.y]).len());
-			 sp_dijkstra.taxi_data_fitting(taxi_data.size(), taxi_data, tmid, 3.0, 5.0, navi_way_res);
-			 //printf("calced! result size: %d.\n", navi_way_res.size());
+			 sp_dijkstra.taxi_data_fitting(taxi_data.size(), taxi_data, tmid, 3.0, 3.0, taxi_fitting_start, taxi_fitting_point);
+			 upper_thing.clear();
+			 draw_fitting_road = 1;
 			 to_draw_taxi = 0;
-#ifdef DEBUG_LITTLE
+#ifdef DEBUG_TIME
 			 Console::WriteLine("end fitting: {0}", Clock());
 #endif
+			 double length = 0;
+			 for (int i = 1; i < taxi_fitting_point.size(); i++)
+				 length += (taxi_fitting_point[i - 1] - taxi_fitting_point[i]).len();
+			 char ttt[111];
+			 sprintf(ttt, "%.10lf", length * __convert_to_km);
+			 String ^sss = gcnew String(ttt);
+			 taxi_esti_length_label->Text = sss->Insert(sss->Length, gcnew String(L"千米"));
+			 taxi_data_to_way_button->Text = gcnew String(L"拟合成功！");
+			 if (!taxi_data_sort_worker->IsBusy) taxi_data_sort_worker->RunWorkerAsync();
+			 if (!DrawTheMap->IsBusy) DrawTheMap->RunWorkerAsync();
+}
+private: System::Void taxi_display_mode_button_Click(System::Object^  sender, System::EventArgs^  e) {
+			 navi_way_res.clear();
+			 if (__pic_is_drawing) return;
+			 if (to_draw_taxi == -1 && draw_fitting_road == 0){
+				 to_draw_taxi = 0;
+				 draw_fitting_road = 1;
+			 }
+			 else if (to_draw_taxi != -1 && draw_fitting_road == 1){
+				 to_draw_taxi = -1;
+				 draw_fitting_road = 1;
+			 }
+			 else if (to_draw_taxi != -1 && draw_fitting_road == 0){
+				 to_draw_taxi = -1;
+				 draw_fitting_road = 0;
+			 }
+			 else if (to_draw_taxi == -1 && draw_fitting_road == 1){
+				 to_draw_taxi = -1;
+				 draw_fitting_road = 0;
+			 }
 			 if (!DrawTheMap->IsBusy) DrawTheMap->RunWorkerAsync();
 }
 };
